@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-managment
+spec:
+  replicas: 1
+  template: 
+    metadata:
+      labels:
+        app: account-managment
+    spec:
+      containers:
+      - name: account-managment
+        image: strixman/account-managment-microservice:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: SQLALCHEMY_DATABASE_URI
+          valueFrom:
+            secretKeyRef:
+              name: sdu
+              key: sqlalchemy_database_uri
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: jsk
+              key: jwt_secret_key
+        - name: LOGIT_IO_HOST
+          valueFrom:
+            secretKeyRef:
+              name: lih
+              key: logit_io_host
+        - name: LOGIT_IO_PORT
+          valueFrom:
+            secretKeyRef:
+              name: lip
+              key: logit_io_port
+        livenessProbe:
+          httpGet:
+            port: 80
+            path: /health/liveness
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            port: 80
+            path: /health/readiness
+          initialDelaySeconds: 90
+          periodSeconds: 60
+          timeoutSeconds: 5
+  selector:
+    matchLabels:
+      app: account-managment
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-managment
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector: 
+    app: account-managment
