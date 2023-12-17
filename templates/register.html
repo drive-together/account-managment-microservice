@@ -20,7 +20,7 @@
             event.preventDefault();
 
             // Perform the form submission using JavaScript
-            fetch('/api/register', {
+            fetch('/account-managment/api/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -37,7 +37,7 @@
                     localStorage.setItem('jwt_token', data.access_token);
 
                     // Redirect to index.html or perform other actions as needed
-                    window.location.href = '/create';
+                    window.location.href = '/ride-managment/create';
                 } else {
                     alert('Register failed. Please check your credentials.');
                 }
