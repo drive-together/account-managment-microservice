@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from prometheus_flask_exporter import PrometheusMetrics
@@ -21,21 +21,7 @@ def create_app():
     jwt = JWTManager(app)
     metrics = PrometheusMetrics(app)
 
-    swagger_config = {
-        "headers": [],
-        "specs": [
-            {
-                "endpoint": 'APISpecification',
-                "route": '/APISpecification',
-                "rule_filter": lambda rule: True,  # all in
-                "model_filter": lambda tag: True,  # all in
-            }
-        ],
-        "static_url_path": "/account-managment/flasgger_static",
-        "specs_route": "/swagger_doc/",
-        "url_prefix": ""
-    }
-    swagger = Swagger(app, swagger_config)
+    swagger = Swagger(app)
 
     # Register blueprints
     app.register_blueprint(main_bp)
