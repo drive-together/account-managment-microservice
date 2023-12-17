@@ -31,9 +31,9 @@ def create_app():
                 "model_filter": lambda tag: True,  # all in
             }
         ],
-        "static_url_path": "/flasgger_static",
+        "static_url_path": "/account-managment/flasgger_static",
         "specs_route": "/swagger_doc/",
-        "url_prefix": "/account-managment"
+        "url_prefix": ""
     }
     swagger = Swagger(app, swagger_config)
 
