@@ -25,3 +25,10 @@ spec:
                 name: ride-managment
                 port:
                  number: 80
+          - path: /(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: account-managment
+                port:
+                  number: 80
