@@ -21,7 +21,21 @@ def create_app():
     jwt = JWTManager(app)
     metrics = PrometheusMetrics(app)
 
-    swagger = Swagger(app)
+    swagger_config = {
+        "headers": [],
+        "specs": [
+            {
+                "endpoint": 'APISpecification',
+                "route": '/APISpecification',
+                "rule_filter": lambda rule: True,  # all in
+                "model_filter": lambda tag: True,  # all in
+            }
+        ],
+        "static_url_path": "/flasgger_static",
+        "specs_route": "/swagger_doc/",
+        "url_prefix": "/ride-managment"
+    }
+    swagger = Swagger(app, swagger_config)
 
     # Register blueprints
     app.register_blueprint(main_bp)
