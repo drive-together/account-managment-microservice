@@ -33,7 +33,7 @@ def create_app():
         ],
         "static_url_path": "/flasgger_static",
         "specs_route": "/swagger_doc/",
-        "url_prefix": "/ride-managment"
+        "url_prefix": "/account-managment"
     }
     swagger = Swagger(app, swagger_config)
 
