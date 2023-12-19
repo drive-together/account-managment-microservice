@@ -27,6 +27,16 @@ def login_page():
 
 @main_bp.route('/register', methods=['GET'])
 def register_page():
+    """
+    Endpoint to perform some operation.
+
+    ---
+    responses:
+      200:
+        description: Successful operation
+      500:
+        description: An error occurred
+    """
     return render_template('register.html')
 
 @main_bp.route('/api/register', methods=['POST'])
