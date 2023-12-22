@@ -3,8 +3,6 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from prometheus_flask_exporter import PrometheusMetrics
 import logging
 from flask_graphql import GraphQLView
-from timeout_decorator import timeout
-from circuitbreaker import circuit, CircuitBreakerError
 from models.user import db, User
 from schemas.user import schema as user_schema
 
@@ -12,61 +10,92 @@ main_bp = Blueprint('main', __name__)
 metrics = PrometheusMetrics(main_bp)
 logger = logging.getLogger('python-logstash-logger')
 extra = {
-    'service': 'ride_sharing',
+    'service': 'account-management-microservice',
 }
 
 login_counter = metrics.counter(
     'login_counter',
-    'Number of successful logins',
+    'Number of login calls',
     labels={'endpoint': '/api/login'}
+)
+register_counter = metrics.counter(
+    'register_counter',
+    'Number of registration calls',
+    labels={'endpoint': '/api/register'}
+)
+graphql_users_counter = metrics.counter(
+    'graphql_users_counter',
+    'Number of GraphQL calls',
+    labels={'endpoint': '/users'}
 )
 
 @main_bp.route('/login', methods=['GET'])
 def login_page():
+    """
+    Renders the login page.
+
+    ---
+    responses:
+      200:
+        description: Returns the HTML page for login.
+    """
+    logger.info("Login page rendered", extra=extra)
     return render_template('login.html')
 
 @main_bp.route('/register', methods=['GET'])
 def register_page():
     """
-    Endpoint to perform some operation.
+    Renders the register page.
 
     ---
     responses:
       200:
-        description: Successful operation
-      500:
-        description: An error occurred
+        description: Returns the HTML page for registration.
     """
+    logger.info("Register page rendered", extra=extra)
     return render_template('register.html')
 
 @main_bp.route('/api/register', methods=['POST'])
+@register_counter
 def register_user():
     """
-    Endpoint to perform some operation.
+    Registers a new user.
 
     ---
     parameters:
-      - name: user_id
-        in: query
-        type: integer
+      - name: User
+        in: body
+        type: object
         required: true
-        description: The ID of the user.
+        schema:
+            id: User
+            properties:
+                username:
+                    type: string
+                    description: The username for the user.
+                password:
+                    type: string
+                    description: The password for the user.
     responses:
-      200:
-        description: Successful operation
-      500:
-        description: An error occurred
+      201:
+        description: User registered successfully.
+      400:
+        description: Bad request. Username and password are required.
+      400:
+        description: Bad request. Username already exists.
     """
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
 
     if not username or not password:
+        logger.info("Registration failed: Username and password are required", extra=extra)
         return jsonify(message='Username and password are required'), 400
 
     existing_user = User.query.filter_by(username=username).first()
 
     if existing_user:
+        logger.info(f'Username already exists: {username}', extra=extra)
         return jsonify(message='Username already exists'), 400
 
     new_user = User(username=username,)
@@ -77,16 +106,45 @@ def register_user():
 
     access_token = create_access_token(identity=new_user.id)
     
+    logger.info(f'User registered successfully: {username}', extra=extra)
     return jsonify(message='User registered successfully', user=new_user.to_dict(), access_token=access_token), 201
 
 @main_bp.route('/api/login', methods=['POST'])
 @login_counter
 def login():
+    """
+    Logs in a user.
+
+    ---
+    parameters:
+      - name: User
+        in: body
+        type: object
+        required: true
+        schema:
+            id: User
+            properties:
+                username:
+                    type: string
+                    description: The username for the user.
+                password:
+                    type: string
+                    description: The password for the user.
+    responses:
+      200:
+        description: Login successful.
+      400:
+        description: Bad request. Username and password are required.
+      401:
+        description: Unauthorized. Invalid username or password.
+    """
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
 
     if not username or not password:
+        logger.info("Login failed: Username and password are required", extra=extra)
+
         return jsonify(message='Username and password are required'), 400
 
     user = User.query.filter_by(username=username).first()
@@ -97,30 +155,24 @@ def login():
         access_token = create_access_token(identity=user.id)
         return jsonify(message='Login successful', user=user.to_dict(), access_token=access_token)
 
+    logger.info(f'Login failed: Invalid username or password for user: {username}', extra=extra)
     return jsonify(message='Invalid username or password'), 401
 
 
 @main_bp.route('/api/users', methods=['POST'])
+@graphiql_users_counter
 def users():
+    """
+    GraphQL endpoint for user-related operations.
+
+    ---
+    parameters:
+      - name: Query
+        in: body
+        type: string
+        required: true
+    responses:
+      200:
+        description: Returns GraphQL data.
+    """
     return GraphQLView.as_view('graphql', schema=user_schema, graphiql=True)()
-    
-
-
-@timeout(5) #TODO test on linux
-def timeout(seconds):
-    import time
-    time.sleep(seconds)
-
-@main_bp.route('/api/timeout_test/<int:seconds>', methods=['GET'])
-async def timeout_test(seconds):
-    try:
-        timeout(seconds)
-        return jsonify("OK"), 200
-    except Exception as e:
-        return jsonify(None), 200 #Fallback
-    
-
-@circuit(failure_threshold=2, expected_exception=TimeoutError)
-@main_bp.route('/api/circuit_breaker_test', methods=['GET'])
-def circuit_breaker_test():
-    timeout(6)
