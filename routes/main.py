@@ -160,7 +160,7 @@ def login():
 
 
 @main_bp.route('/api/users', methods=['POST'])
-@graphiql_users_counter
+@graphql_users_counter
 def users():
     """
     GraphQL endpoint for user-related operations.
